@@ -1,0 +1,17 @@
+import {db,bucket,json,identity,fail,invalid,reference} from '@/lib/server';
+import {categories} from '@/lib/validation';
+export async function POST(req:Request){let uploaded='';try{
+ const u=await identity(req),p=new URL(req.url).searchParams;const size=Number(req.headers.get('content-length'));
+ if(!size||size>50*1024*1024)invalid('Envie um arquivo de até 50 MB.');
+ const name=(p.get('name')||'').replace(/[\r\n\\/]/g,'_').slice(0,220),category=p.get('category')||'Outros',clientId=p.get('clientId')||'',processId=p.get('processId')||'';
+ const types:Record<string,string>={pdf:'application/pdf',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png'};
+ const mime=types[name.split('.').pop()?.toLowerCase()||''];if(!mime||!categories.includes(category))invalid('Use PDF, DOCX, JPG ou PNG e uma categoria válida.');
+ await reference(u.userId,clientId,'clients');await reference(u.userId,processId,'processes');
+ if(processId&&clientId){const p:any=await db().prepare('SELECT data FROM records WHERE owner=? AND id=?').bind(u.userId,processId).first();if(JSON.parse(p.data).clientId!==clientId)invalid('O processo deve pertencer ao cliente.');}
+ const id=crypto.randomUUID(),key=u.userId+'/'+id,now=new Date().toISOString();
+ if(!req.body)invalid('Arquivo vazio.');await bucket().put(key,req.body,{httpMetadata:{contentType:mime}});uploaded=key;
+ await db().batch([db().prepare('INSERT INTO files (id,owner,name,category,client_id,process_id,size,mime,created) VALUES (?,?,?,?,?,?,?,?,?)').bind(id,u.userId,name,category,clientId,processId,size,mime,now),db().prepare('INSERT INTO activity (id,owner,actor,action,detail,created) VALUES (?,?,?,?,?,?)').bind(crypto.randomUUID(),u.userId,u.displayName,'Documento anexado',name,now)]);
+ uploaded='';return json({id});
+ }catch(e){if(uploaded)try{await bucket().delete(uploaded)}catch{}return fail(e)}}
+export async function GET(req:Request){try{const u=await identity(req),p=new URL(req.url).searchParams;const f:any=await db().prepare('SELECT * FROM files WHERE owner=? AND id=?').bind(u.userId,p.get('id')||'').first();if(!f)return json({error:'Arquivo não encontrado.'},404);const file=await bucket().get(u.userId+'/'+f.id);if(!file)return json({error:'Arquivo indisponível.'},404);return new Response(file.body,{headers:{'Content-Type':f.mime,'Content-Length':String(f.size),'Content-Disposition':`${p.get('preview')==='1'&&f.mime!=='application/vnd.openxmlformats-officedocument.wordprocessingml.document'?'inline':'attachment'}; filename*=UTF-8''${encodeURIComponent(f.name)}`,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox; default-src 'none'"}})}catch(e){return fail(e)}}
+export async function DELETE(req:Request){try{const u=await identity(req),id=new URL(req.url).searchParams.get('id')||'';const f:any=await db().prepare('SELECT * FROM files WHERE owner=? AND id=?').bind(u.userId,id).first();if(!f)return json({error:'Arquivo não encontrado.'},404);await bucket().delete(u.userId+'/'+id);await db().batch([db().prepare('DELETE FROM files WHERE owner=? AND id=?').bind(u.userId,id),db().prepare('INSERT INTO activity (id,owner,actor,action,detail,created) VALUES (?,?,?,?,?,?)').bind(crypto.randomUUID(),u.userId,u.displayName,'Documento excluído',f.name,new Date().toISOString())]);return json({ok:true})}catch(e){return fail(e)}}
