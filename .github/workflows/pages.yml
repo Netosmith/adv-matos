@@ -30,6 +30,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build static portal
         run: pnpm exec vite build --config vite.pages.config.ts
+      - name: Validate API Worker bundle
+        run: pnpm exec wrangler deploy --dry-run --config worker/wrangler.ci.toml --outdir dist-worker
       - name: Disable Jekyll
         run: touch dist-pages/.nojekyll
       - name: Upload Pages artifact
