@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./login.css";
+import AuthBridge from "./auth-bridge";
 
 export const metadata: Metadata = {
   title: "Matos Advocacia | Portal Administrativo",
@@ -18,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased"><AuthBridge/>{children}</body>
     </html>
   );
 }
