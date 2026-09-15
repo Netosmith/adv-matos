@@ -1,10 +1,10 @@
 import { env } from 'cloudflare:workers';
-import { getChatGPTUser } from '@/app/chatgpt-auth';
+import { getRequestUser } from '@/lib/auth';
 export function db(){const d=(env as unknown as {DB:D1Database}).DB;if(!d)throw new Error('Database unavailable');return d;}
 export function bucket(){const b=(env as unknown as {BUCKET:R2Bucket}).BUCKET;if(!b)throw new Error('Storage unavailable');return b;}
 export function json(data:unknown,status=200){return Response.json(data,{status,headers:{'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}})}
 export async function identity(req:Request){
- const u=await getChatGPTUser();if(!u)throw new Response('Sessão expirada. Entre novamente.',{status:401});
+ const u=await getRequestUser(req);if(!u)throw new Response('Sessão expirada. Entre novamente.',{status:401});
  if(!['GET','HEAD'].includes(req.method)){
   const origin=req.headers.get('origin');if(!origin||origin!==new URL(req.url).origin)throw new Response('Origem não autorizada.',{status:403});
  }
