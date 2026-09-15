@@ -1,0 +1,16 @@
+name = "adv-matos-api"
+main = "src/worker.ts"
+compatibility_date = "2026-09-15"
+
+[vars]
+ALLOWED_ORIGIN = "https://netosmith.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "adv-matos-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "adv-matos-files"
