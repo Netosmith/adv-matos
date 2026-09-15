@@ -1,6 +1,6 @@
 # Matos Advocacia — Portal administrativo
 
-Portal baseado nas sete telas fornecidas, com identidade visual escura e dourada, logo e fotografia do anexo.
+Portal administrativo com identidade visual escura e dourada para gestão interna da Matos Advocacia.
 
 ## Funcionalidades
 
@@ -11,30 +11,32 @@ Portal baseado nas sete telas fornecidas, com identidade visual escura e dourada
 - Contratos: cadastro, vínculo ao cliente/processo, editor, formatação básica, estruturas preenchíveis, vigência, status manual e impressão/salvar PDF pelo navegador.
 - Configurações do escritório usadas nas estruturas de documentos.
 
-## Acesso e dados
+## Acesso e autenticação
 
-Esta versão usa a autenticação do ChatGPT/Sites. A publicação inicial é privada ao proprietário. A interface por e-mail/senha da referência não está implementada. Para uso por uma equipe externa é necessário definir e implementar a autenticação e a autorização desse ambiente; não publicar o Worker fora do dispatcher Sites confiando em cabeçalhos enviados diretamente pelo cliente.
+O portal usa autenticação própria por usuário e senha. A sessão é armazenada em cookie HttpOnly/SameSite e validada no servidor. Senhas são derivadas com PBKDF2-SHA-256 e salt individual; a senha provisória do administrador precisa ser alterada no primeiro acesso.
 
-Os registros e arquivos são isolados pelo identificador autenticado do usuário. Não existe carteira compartilhada entre usuários nesta versão. Dados estruturados ficam no D1, arquivos no R2. Todas as APIs verificam identidade no servidor, operações de escrita conferem origem e atualizações de registros verificam a versão para evitar sobrescritas concorrentes.
+Há proteção contra tentativas repetidas de login e sessões persistidas no D1. O usuário administrativo inicial é `admin`; a senha provisória não fica em texto no repositório.
 
-Não há integração com tribunais, cálculo automático de prazos, assinatura eletrônica ou e-mail. Datas, movimentações e status de assinatura são informados manualmente. As estruturas de contratos contêm campos para preenchimento e revisão, sem inventar dados de OAB, sede ou condições legais do escritório.
+A autenticação do ChatGPT/Sites não é mais necessária para entrar no portal.
+
+## Dados
+
+Dados estruturados ficam no D1 e arquivos no R2. O workspace nativo reutiliza o proprietário de dados encontrado na instalação anterior, preservando os registros existentes e os caminhos dos arquivos R2 quando houver conteúdo criado antes da troca de autenticação.
+
+Todas as APIs verificam a sessão no servidor, operações de escrita conferem origem e atualizações de registros verificam a versão para evitar sobrescritas concorrentes.
+
+Não há integração com tribunais, cálculo automático de prazos, assinatura eletrônica ou e-mail. Datas, movimentações e status de assinatura são informados manualmente.
 
 ## Desenvolvimento
 
 Node >=22.13 e pnpm conforme `packageManager`. Instalar com `pnpm install --frozen-lockfile`. Comandos: `pnpm dev`, `pnpm build`, `pnpm db:generate`.
 
-Schema: `db/schema.ts`. Migrações: `drizzle/`. API: `app/api/`. Interface: `app/portal.tsx` e `app/globals.css`. Bindings lógicos: DB e BUCKET, configurados em `.openai/hosting.json`. A publicação Sites provisiona os recursos e aplica as migrações.
+Schema: `db/schema.ts`. Migrações: `drizzle/`. API: `app/api/`. Interface: `app/portal.tsx`, `app/login-form.tsx`, `app/globals.css` e `app/login.css`. Bindings lógicos: DB e BUCKET, configurados em `.openai/hosting.json`.
 
-Não há senhas padrão ou chaves de acesso no código. A conta inicial vem da autenticação da plataforma. O site inicia sem clientes, processos e contratos fictícios.
-
-## Repositório
+## Repositório e portal
 
 Código-fonte: https://github.com/Netosmith/adv-matos
 
 Portal publicado: https://adv-matos.netosmith.chatgpt.site
 
-O GitHub Pages não executa as APIs, a autenticação e o banco desta aplicação. O ambiente publicado continua no Sites.
-
-## Verificação desta entrega
-
-Compilação TypeScript e build de produção aprovados. Testes de integração com o Worker compilado e D1/R2 locais passaram: sessão ausente, CRUD e persistência, concorrência, isolamento por conta, validação de vínculos, histórico de atividades, origem de escrita, upload/download/exclusão e renderização do painel. A validação de WebMCP em navegador não foi executada: esta sessão não dispõe de um contexto permitido de teste WebMCP. O registro é opcional e não altera o funcionamento da interface.
+O GitHub Pages não executa as APIs, autenticação, banco D1 ou armazenamento R2 desta aplicação.
