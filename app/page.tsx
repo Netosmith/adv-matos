@@ -1,4 +1,12 @@
 import Portal from './portal';
-import {getChatGPTUser} from './chatgpt-auth';
-export const dynamic = 'force-dynamic';
-export default async function Home(){const user=await getChatGPTUser();return <Portal user={user ? {name:user.displayName,email:user.email} : null}/>}
+import LoginForm,{ChangePasswordForm} from './login-form';
+import {getCurrentUser} from '@/lib/auth';
+
+export const dynamic='force-dynamic';
+
+export default async function Home(){
+ const user=await getCurrentUser();
+ if(!user)return <LoginForm/>;
+ if(user.mustChangePassword)return <ChangePasswordForm username={user.username}/>;
+ return <Portal user={{name:user.displayName,email:user.email||user.username}}/>;
+}
